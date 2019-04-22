@@ -156,3 +156,88 @@ def leNet_model():
   return model
 
 model = leNet_model()
+
+"""TRAINING WITH AUG"""
+augmented_model = leNet_model()
+
+augmented_checkpoint = ModelCheckpoint('augmented_best_model.h5',  # model filename
+                             monitor='val_loss', # quantity to monitor
+                             verbose=0, # verbosity - 0 or 1
+                             save_best_only= True, # The latest best model will not be overwritten
+                             mode='auto') # The decision to overwrite model is made 
+                                          # automatically depending on the quantity to monitor
+BS_aug=30
+NUM_EPOCH_aug = 150
+SPE_aug = len(X_train) // BS_aug
+print(len(X_train))
+print(SPE_aug)
+
+augmented_model_details = augmented_model.fit_generator(datagen.flow(X_train, y_train, batch_size = BS_aug),
+                    steps_per_epoch = SPE_aug, # number of samples per gradient update
+                    epochs = NUM_EPOCH_aug, # number of iterations
+                    validation_data= (X_test, y_test),
+                    callbacks=[augmented_checkpoint],
+                    shuffle=1,
+                    verbose=1)
+
+# menampilkan performance training
+plt.plot(augmented_model_details.history['loss'])
+plt.plot(augmented_model_details.history['val_loss'])
+plt.legend(['loss', 'val_loss'])
+plt.title('Loss')
+plt.xlabel('epoch')
+
+plt.plot(augmented_model_details.history['acc'])
+plt.plot(augmented_model_details.history['val_acc'])
+plt.legend(['acc', 'val_acc'])
+plt.title('Accuracy')
+plt.xlabel('epoch')
+
+scores = augmented_model.evaluate(X_train, y_train, verbose=0)
+print("Accuracy: %.2f%%" % (scores[1]*100))
+print('Test Loss:', scores[0])
+
+# nge save your model
+augmented_model.save('your_name_model.h5')
+
+
+# Print the confusion matrix
+Y_pred = augmented_model.predict(X_test)
+y_pred = np.argmax(Y_pred,axis=1)
+target_names=['Class 0 (cyst)', 'Class 1 (granuloma)', 'Class 2 (nodule)', 'Class 3 (none)',
+              'Class 4 (normal)', 'Class 5 (papiloma)', 'Class 6 (paralysis)']
+
+print(classification_report(np.argmax(y_test,axis=1),y_pred,target_names=target_names))
+print('Confusion Matrix \n')
+print(confusion_matrix(np.argmax(y_test,axis=1), y_pred))
+
+# nge test hasil training
+def hehehe():
+    if (kelas==0):
+        print("cyst")
+    if (kelas==1):
+        print("granuloma")
+    if (kelas==2):
+        print("nodule")
+    if (kelas==3):
+        print("none")    
+    if (kelas==4):
+        print("normal")
+    if (kelas==5):
+        print("papilomaa")
+    if (kelas==6):
+        print("paralysis")
+        
+image1 = X_test[45, :].reshape((128,128))
+plt.imshow(image1, cmap='gray')
+plt.show()
+
+image1= np.expand_dims(image1, axis=3) 
+image1= np.expand_dims(image1, axis=0)
+# print (image1.shape)
+hehehe()
+
+print(augmented_model.predict(image1)[0])
+kelas = augmented_model.predict_classes(image1)[0] 
+persen = augmented_model.predict(image1)[0,kelas] *100
+print("Accuracy: %.2f%%" % (persen))    
