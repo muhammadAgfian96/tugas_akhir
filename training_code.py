@@ -156,3 +156,142 @@ def leNet_model():
   return model
 
 model = leNet_model()
+
+"""===== TRAINING ===="""
+# persiapan
+BS=50
+# SPE = len(X_train) // BS
+SPE=500
+print(SPE)
+
+# mulai training
+history = model.fit(X_train, y_train, batch_size=50, nb_epoch=30, verbose=1, validation_data=(X_test, y_test), shuffle =1)
+
+# memplot hasil training
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.legend(['loss', 'val_loss'])
+plt.title('Loss')
+plt.xlabel('epoch')
+
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.legend(['acc', 'val_acc'])
+plt.title('Accuracy')
+plt.xlabel('epoch')
+
+score = model.evaluate(X_test, y_test, verbose=0)
+print('Test Loss:', score[0])
+print('Test Accuracy:', score[1])
+
+# nge save model yang telah lu latih
+model.save('your_model_name.h5')
+
+# mengetest hasil training
+# a. langsung dari X_test
+
+image = X_test[22, :].reshape((128,128))
+plt.imshow(image)
+plt.show()
+
+test_image = X_test[0:1]
+print (test_image.shape)
+print(model.predict(test_image))
+print(model.predict_classes(test_image))
+print(y_test[0:1])
+
+# b. langsung dari directory
+test_img = cv2.imread('C:\\Users\\MANAHATI\\Desktop\\Jupyter 2\\test_cyst2.jpg')
+test_img = cv2.cvtColor(test_img,cv2.COLOR_BGR2GRAY)
+test_img = cv2.resize(test_img,(128,128))
+test_img = np.array(test_img)
+test_img = test_img.astype('float32')
+test_img /= 255
+print(test_img.shape)
+
+image = test_img.reshape((128,128))
+plt.imshow(image)
+plt.show()
+
+if num_channel==1:
+	if K.image_dim_ordering()=='th':
+		test_img= np.expand_dims(test_img, axis=0)
+		test_img= np.expand_dims(test_img, axis=0)
+		print (test_img.shape)
+	else:
+		test_img= np.expand_dims(test_img, axis=3) 
+		test_img= np.expand_dims(test_img, axis=0)
+		print (test_img.shape)
+		
+else:
+	if K.image_dim_ordering()=='th':
+		test_img=np.rollaxis(test_img,2,0)
+		test_img= np.expand_dims(test_img, axis=0)
+		print (test_img.shape)
+	else:
+		test_img= np.expand_dims(test_img, axis=0)
+		print (test_img.shape)
+		
+# Predicting the test image
+print((model.predict(test_img)))
+print(model.predict_classes(test_img))
+if (model.predict_classes(test_img)==0):
+    print("cyst")
+if (model.predict_classes(test_img)==1):
+    print("granuloma")
+if (model.predict_classes(test_img)==2):
+    print("nodule")
+if (model.predict_classes(test_img)==3):
+    print("none")
+if (model.predict_classes(test_img)==4):
+    print("normal")
+if (model.predict_classes(test_img)==5):
+    print("papilomaa")
+if (model.predict_classes(test_img)==5):
+    print("paralysis")
+    
+ # Print the confusion matrix
+Y_pred = model.predict(X_test)
+print(Y_pred)
+y_pred = np.argmax(Y_pred,axis=1)
+print(y_pred)
+target_names=['Class 0 (cyst)', 'Class 1 (granuloma)', 'Class 2 (nodule)', 'Class 3 (none)',
+              'Class 4 (normal)', 'Class 5 (papiloma)', 'Class 6 (paralysis)']
+print(classification_report(np.argmax(y_test,axis=1),y_pred,target_names=target_names))
+
+print('Confusion Matrix \n')
+print(confusion_matrix(np.argmax(y_test,axis=1), y_pred))
+
+"""menampilkan/memvizualisasikan feature maps"""
+
+def get_featuremaps(model, layer_idx, X_batch):
+	get_activations = K.function([model.layers[0].input, K.learning_phase()],[model.layers[layer_idx].output,])
+	activations = get_activations([X_batch,0])
+	return activations
+layer_num=7     # nanti ini diganti2
+filter_num=0    # ini juga di ganti2
+activations = get_featuremaps(model, int(layer_num),test_img)
+print (np.shape(activations))
+
+feature_maps = activations[0][0]
+# print (len(feature_maps))
+for i in range(len(feature_maps)):
+    print(feature_maps[i],end=',')
+    
+fig=plt.figure(figsize=(16,16))
+plt.imshow(feature_maps[:,:,filter_num],cmap='gray')
+plt.savefig("featuremaps-layer-{}".format(layer_num) + "-filternum-{}".format(filter_num)+'.jpg')
+num_of_featuremaps=feature_maps.shape[0]
+print(num_of_featuremaps)
+fig=plt.figure(figsize=(7,7))
+plt.title("featuremaps-layer-{}".format(layer_num))
+subplot_num=int(np.ceil(np.sqrt(num_of_featuremaps)))
+
+for i in range(int(num_of_featuremaps)):
+    ax = fig.add_subplot(subplot_num, subplot_num, i+1)
+# 	ax.imshow(output_image[0,:,:,i],interpolation='nearest' ) #to see the first filter
+    ax.imshow(feature_maps[:,:,i],cmap='gray')
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
+plt.show()
